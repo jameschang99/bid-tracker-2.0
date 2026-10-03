@@ -31,7 +31,7 @@ router.post('/', async (req, res, next) => {
     if (!jobUrl) errors.push('jobUrl must be a valid URL');
     if (errors.length) return res.status(400).json({ ok: false, errors });
 
-    const doc = { platform: b.platform.toLowerCase().trim(), jobUrl };
+    const doc = { userId: req.user._id, platform: b.platform.toLowerCase().trim(), jobUrl };
     for (const [k, max] of Object.entries(TEXT_FIELDS)) doc[k] = str(b[k], max);
     doc.companyName = doc.companyName || 'Not disclosed';
     doc.workMethod = WORK_METHODS.includes(b.workMethod) ? b.workMethod : 'unknown';
@@ -39,7 +39,7 @@ router.post('/', async (req, res, next) => {
     Object.assign(doc, enrichment.fields);
 
     const saved = await Bid.findOneAndUpdate(
-      { platform: doc.platform, jobUrl },
+      { userId: doc.userId, platform: doc.platform, jobUrl },
       { $set: doc },
       { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
     );
@@ -53,7 +53,8 @@ router.post('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 500, 2000);
-    const filter = req.query.platform ? { platform: String(req.query.platform).toLowerCase() } : {};
+    const filter = { userId: req.user._id };
+    if (req.query.platform) filter.platform = String(req.query.platform).toLowerCase();
     const bids = await Bid.find(filter).sort({ createdAt: -1 }).limit(limit);
     res.json({ ok: true, count: bids.length, bids });
   } catch (err) {
@@ -66,7 +67,7 @@ router.post('/bulk-delete', async (req, res, next) => {
   try {
     const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids.filter((i) => mongoose.isValidObjectId(i)) : [];
     if (!ids.length || ids.length > 1000) return res.status(400).json({ ok: false, error: 'ids must be 1-1000 valid ids' });
-    const r = await Bid.deleteMany({ _id: { $in: ids } });
+    const r = await Bid.deleteMany({ _id: { $in: ids }, userId: req.user._id });
     res.json({ ok: true, deleted: r.deletedCount });
   } catch (err) {
     next(err);
@@ -95,7 +96,7 @@ router.patch('/:id', async (req, res, next) => {
     }
     if ('jobTitle' in set && !set.jobTitle) return res.status(400).json({ ok: false, error: 'jobTitle cannot be empty' });
     if (!Object.keys(set).length) return res.status(400).json({ ok: false, error: 'Nothing to update' });
-    const bid = await Bid.findByIdAndUpdate(req.params.id, { $set: set }, { new: true, runValidators: true });
+    const bid = await Bid.findOneAndUpdate({ _id: req.params.id, userId: req.user._id }, { $set: set }, { new: true, runValidators: true });
     if (!bid) return res.status(404).json({ ok: false, error: 'Not found' });
     res.json({ ok: true, bid });
   } catch (err) {
@@ -106,7 +107,7 @@ router.patch('/:id', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ ok: false, error: 'Invalid id' });
-    const r = await Bid.findByIdAndDelete(req.params.id);
+    const r = await Bid.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     if (!r) return res.status(404).json({ ok: false, error: 'Not found' });
     res.json({ ok: true });
   } catch (err) {

@@ -17,9 +17,9 @@ such as `chrome://` cannot be accessed by extensions.
 ```bash
 cd backend
 docker compose up -d          # MongoDB (or use Atlas / a local install and set MONGODB_URI)
-cp .env.example .env          # set API_KEY (and MONGODB_URI if not local)
+cp .env.example .env          # set MONGODB_URI if not using local MongoDB
 npm install
-npm run dev                   # http://localhost:4000
+npm run dev                   # http://127.0.0.1:4000
 ```
 
 Optional hosted AI enrichment: set `AI_ENABLED=true`, `AI_MODEL`, `AI_API_URL`, and `AI_API_KEY` in
@@ -31,8 +31,9 @@ configured provider and may be subject to its data policy; model output should b
 
 ## 2. Extension
 1. `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select `extension/`.
-2. Open the extension **Options**: set a username, API URL (`http://localhost:4000`), and the same API key as `.env`.
-3. On a job page press **Ctrl + .** — a toast shows "job work added success" (or "job work added fail" if it could not be saved; the reason is in the F12 console). Pressing it again on the same job updates the entry.
+2. Sign in or create an account in the web app. Open web **Settings** and generate an extension pairing code.
+3. Open the extension **Options**, set the API URL (`http://127.0.0.1:4000`), and enter the one-time pairing code.
+4. On a job page press **Ctrl + .** — a toast shows "job work added success" (or "job work added fail" if it could not be saved; the reason is in the F12 console). Pressing it again on the same job updates the entry.
    After updating the extension, reload it in `chrome://extensions` and refresh the job tab.
 
 Saved per entry: bid sent status, username, platform, job title, company, location, location type, **employment type**,
@@ -43,27 +44,32 @@ parsing). The day an entry belongs to is its creation time (set by the server).
 ```bash
 cd frontend
 npm install
-npm run dev                   # http://localhost:5173 (proxies /api to :4000; listens on LAN)
+npm run dev                   # http://127.0.0.1:5173 (proxies /api to :4000)
 ```
-Open it, enter the API key in **Settings**, and:
+Open it and sign in or create an account with a username and password. Usernames must be 3-32 characters; passwords must be 10-128 characters. Each account sees only its
+own bids. Existing bids created before accounts were added remain unassigned and are not shown to any account;
+they are not deleted.
 - Browse by day (sidebar, ◀ ▶, date picker, Today, All days) and search.
 - Tick rows (or the header box) to select; **Delete selected**; per-row **Edit** / **Delete**.
 - **Export CSV** downloads exactly what is displayed (or only the selected rows if any are ticked).
 
-For another device on the same LAN, open `http://<host-lan-ip>:5173` (find the host IP with `ipconfig`).
-Keep the host and client on the same trusted network; this development server does not provide user-specific
-data isolation.
+The development app binds to localhost so passwords and session tokens are not sent over plain
+HTTP on the LAN. Configure HTTPS before enabling remote access.
 
-Production: `npm run build` in `frontend/`, then the backend serves `frontend/dist` at `http://localhost:4000/`.
+Production: `npm run build` in `frontend/`, then the backend serves `frontend/dist` at `http://127.0.0.1:4000/`.
 
-## API (header `x-api-key` required except /health)
+## API
 | Method | Path | Notes |
 |---|---|---|
-| POST | /api/bids | Upsert by platform + job URL |
-| GET | /api/bids?limit=500&platform=ashby | Newest first |
-| PATCH | /api/bids/:id | Edit fields |
-| DELETE | /api/bids/:id | |
-| POST | /api/bids/bulk-delete | `{ "ids": [...] }` |
+| POST | /api/auth/signup | Create account and session |
+| POST | /api/auth/login | Sign in and create session |
+| GET | /api/auth/me | Current account |
+| POST | /api/auth/logout | Revoke current session |
+| POST | /api/bids | Authenticated; upsert by account + platform + job URL |
+| GET | /api/bids?limit=500&platform=ashby | Authenticated; newest first, current account only |
+| PATCH | /api/bids/:id | Authenticated; edit own bid |
+| DELETE | /api/bids/:id | Authenticated; delete own bid |
+| POST | /api/bids/bulk-delete | Authenticated; `{ "ids": [...] }`, own bids only |
 | GET | /api/health | No auth |
 
 ## Tuning selectors

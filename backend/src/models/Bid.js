@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 // Salary is stored as a plain string, exactly as shown on the web page.
 const bidSchema = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     platform: { type: String, required: true, trim: true, lowercase: true },
     username: { type: String, trim: true, default: '' },
     bidSent: { type: Boolean, default: false },
@@ -20,6 +21,6 @@ const bidSchema = new mongoose.Schema(
 );
 
 // One record per job per platform; pressing Ctrl+. again updates instead of duplicating.
-bidSchema.index({ platform: 1, jobUrl: 1 }, { unique: true });
+bidSchema.index({ userId: 1, platform: 1, jobUrl: 1 }, { unique: true });
 
 module.exports = mongoose.model('Bid', bidSchema);

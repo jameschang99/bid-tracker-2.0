@@ -32,6 +32,20 @@ header {
 .brand-kicker { margin: 0 0 3px; color: var(--sky); font: 11px/1.2 'Courier New', monospace; }
 h1 { margin: 0; color: var(--lime); font: 700 28px/1 Georgia, 'Times New Roman', serif; }
 .header-actions { display: flex; gap: 8px; }
+.account-username { align-self: center; color: #6b7280; font-size: 12px; }
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth-panel { width: min(420px, 100%); padding: 28px; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; }
+.auth-panel h1 { margin: 8px 0; font-size: 28px; }
+.auth-intro { margin: 0 0 20px; color: #6b7280; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #d1d5db; margin-bottom: 18px; }
+.auth-tabs button { border: 0; border-radius: 0; background: transparent; }
+.auth-tabs button.active { color: #166534; border-bottom: 2px solid #166534; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; }
+.auth-form button.primary { align-self: flex-start; }
+.extension-pairing { padding-top: 12px; border-top: 1px solid #e5e7eb; }
+.extension-pairing h3 { margin: 0; font-size: 14px; }
+.pairing-code { display: block; margin-top: 12px; font-size: 24px; font-weight: 700; letter-spacing: 2px; }
 .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; padding: 22px 24px; align-items: start; }
 aside { background: transparent; border-right: 1px solid var(--line); border-radius: 0; padding: 0 14px 0 0; max-height: calc(100vh - 100px); overflow: auto; position: sticky; top: 16px; }
 .day-item { display: flex; justify-content: space-between; width: 100%; text-align: left; border: 0; border-left: 3px solid transparent; background: transparent; padding: 9px 10px; border-radius: 2px; font-size: 13px; color: var(--ink); }
@@ -61,6 +75,7 @@ th { background: var(--lime); color: var(--ink); font-weight: 700; position: sti
 tbody tr:nth-child(even) { background: #f7f5eb; }
 tbody tr:hover { background: #e5f1df; }
 .sort-header { border: 0; background: transparent; padding: 0; font: inherit; white-space: nowrap; }
+.username-heading .sort-header { font-size: 15px; font-weight: 700; color: #166534; }
 .sort-header:hover:not(:disabled) { background: transparent; color: #a83327; }
 td.clip { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 td.salary-cell { min-width: 160px; max-width: 260px; white-space: normal; }

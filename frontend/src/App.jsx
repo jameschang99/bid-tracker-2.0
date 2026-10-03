@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api, getConfig } from './api.js';
+import { api, clearSession, getConfig, getSession, saveSession } from './api.js';
 import { dateKey, timeStr, groupCounts, shiftDay, prettyDay } from './lib/days.js';
 import { toCsv, downloadCsv } from './lib/csv.js';
 import { salaryMethod, salaryValue } from './lib/salary.js';
 import EditDialog from './components/EditDialog.jsx';
+import AuthScreen from './components/AuthScreen.jsx';
 import SettingsDialog from './components/SettingsDialog.jsx';
 
 const todayKey = () => dateKey(new Date());
@@ -18,7 +19,9 @@ export default function App() {
   const [selected, setSelected] = useState(() => new Set());
   const [updatingSent, setUpdatingSent] = useState(() => new Set());
   const [editing, setEditing] = useState(null);
-  const [showSettings, setShowSettings] = useState(() => !getConfig().apiKey);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,8 +38,42 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (getConfig().apiKey) load();
+    let active = true;
+    if (!getSession()?.token) {
+      setAuthLoading(false);
+      return () => { active = false; };
+    }
+    api.me()
+      .then(({ user: currentUser }) => {
+        if (!active) return;
+        setUser(currentUser);
+        load();
+      })
+      .catch((authError) => {
+        if (!active) return;
+        if (authError.status === 401) clearSession();
+        setError(authError.status === 401 ? 'Your session expired. Please sign in again.' : authError.message);
+      })
+      .finally(() => { if (active) setAuthLoading(false); });
+    return () => { active = false; };
   }, [load]);
+
+  const authenticate = async (mode, username, password) => {
+    const session = await api[mode](username, password);
+    saveSession(session);
+    setUser(session.user);
+    setError('');
+    await load();
+  };
+
+  const logout = async () => {
+    try { await api.logout(); } catch {}
+    clearSession();
+    setUser(null);
+    setBids([]);
+    setSelected(new Set());
+    setDay(null);
+  };
 
   const days = useMemo(() => groupCounts(bids.map((b) => b.createdAt)), [bids]);
 
@@ -100,7 +137,7 @@ export default function App() {
   const sortableHeader = (label, key) => {
     const active = sort.key === key;
     return (
-      <th key={key} aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <th key={key} className={key === 'username' ? 'username-heading' : ''} aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
         <button
           type="button"
           className="sort-header"
@@ -140,6 +177,9 @@ export default function App() {
     setEditing(null);
   };
 
+  if (authLoading) return <main className="auth-page"><p>Checking session…</p></main>;
+  if (!user) return <AuthScreen onAuthenticated={authenticate} notice={error} />;
+
   const toggleBidSent = async (bid) => {
     setUpdatingSent((current) => new Set(current).add(bid._id));
     try {
@@ -164,8 +204,10 @@ export default function App() {
           <h1>Bid Tracker</h1>
         </div>
         <div className="header-actions">
+          <span className="account-username">{user.username}</span>
           <button onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>
           <button onClick={() => setShowSettings(true)}>Settings</button>
+          <button onClick={logout}>Log out</button>
         </div>
       </header>
 
