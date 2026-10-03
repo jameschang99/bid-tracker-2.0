@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Bid = require('../models/Bid');
+const { enrichJobFields } = require('../services/ai');
 
 const router = express.Router();
 const WORK_METHODS = ['hourly', 'fixed', 'unknown'];
@@ -34,13 +35,15 @@ router.post('/', async (req, res, next) => {
     for (const [k, max] of Object.entries(TEXT_FIELDS)) doc[k] = str(b[k], max);
     doc.companyName = doc.companyName || 'Not disclosed';
     doc.workMethod = WORK_METHODS.includes(b.workMethod) ? b.workMethod : 'unknown';
+    const enrichment = await enrichJobFields(doc);
+    Object.assign(doc, enrichment.fields);
 
     const saved = await Bid.findOneAndUpdate(
       { platform: doc.platform, jobUrl },
       { $set: doc },
       { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
     );
-    res.status(201).json({ ok: true, bid: saved });
+    res.status(201).json({ ok: true, bid: saved, aiEnhanced: enrichment.used });
   } catch (err) {
     next(err);
   }

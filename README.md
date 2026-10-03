@@ -22,6 +22,13 @@ npm install
 npm run dev                   # http://localhost:4000
 ```
 
+Optional hosted AI enrichment: set `AI_ENABLED=true`, `AI_MODEL`, `AI_API_URL`, and `AI_API_KEY` in
+`backend/.env`, then restart the backend. The default uses an OpenAI-compatible chat-completions endpoint.
+On each save, the backend sends extracted job fields and page text to the provider; it does not send username,
+job URL, or API keys in the prompt. The API key stays on the backend. AI fills only missing or placeholder
+fields, and normal extraction continues if the provider is unavailable or times out. Page text is sent to the
+configured provider and may be subject to its data policy; model output should be reviewed.
+
 ## 2. Extension
 1. `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select `extension/`.
 2. Open the extension **Options**: set a username, API URL (`http://localhost:4000`), and the same API key as `.env`.
